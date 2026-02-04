@@ -9,7 +9,7 @@ from reportlab.lib import colors
 from io import BytesIO
 from datetime import datetime
 
-# ---------------- CONFIGURACIÓN ----------------
+# ---------------- CONFIGURACIÓN DE PÁGINA ----------------
 if 'sidebar_state' not in st.session_state:
     st.session_state.sidebar_state = "expanded"
 
@@ -46,7 +46,7 @@ st.markdown(f"""
     </style>
     """, unsafe_allow_html=True)
 
-# ---------------- SESSION STATE ----------------
+# ---------------- ESTADO DE LA SESIÓN ----------------
 if 'df_original' not in st.session_state: st.session_state.df_original = None
 if 'df_participantes' not in st.session_state: st.session_state.df_participantes = None
 if 'ganadores_lista' not in st.session_state: st.session_state.ganadores_lista = []
@@ -56,7 +56,7 @@ if 'ultimo_ganador' not in st.session_state: st.session_state.ultimo_ganador = N
 if 'tanda_actual_lista' not in st.session_state: st.session_state.tanda_actual_lista = []
 if 'acta_descargada' not in st.session_state: st.session_state.acta_descargada = False
 
-# ---------------- FUNCIÓN PDF ----------------
+# ---------------- FUNCIÓN GENERAR PDF ----------------
 def generar_pdf_profesional(lista_ganadores):
     buffer = BytesIO()
     doc = SimpleDocTemplate(buffer, pagesize=letter)
@@ -90,14 +90,16 @@ def generar_pdf_profesional(lista_ganadores):
     buffer.seek(0)
     return buffer
 
-# ---------------- SIDEBAR ----------------
+# ---------------- SIDEBAR (PANEL DE CONTROL) ----------------
 with st.sidebar:
     st.title("⚙️ Panel de Control")
+    # Lógica de bloqueo: si hay ganadores y no se ha descargado el acta
     bloqueo_seguridad = len(st.session_state.ganadores_lista) > 0 and not st.session_state.acta_descargada
+    
     archivo_subido = st.file_uploader("1. Cargar Excel", type=["xlsx", "xls"])
 
     if bloqueo_seguridad:
-        st.warning("⚠️ Debe descargar el reporte antes de reiniciar o filtrar.")
+        st.error("⚠️ SISTEMA BLOQUEADO: Debe descargar el reporte antes de modificar la configuración.")
 
     if archivo_subido and st.button("🚀 Cargar / Reiniciar Base", disabled=bloqueo_seguridad):
         df = pd.read_excel(archivo_subido)
@@ -114,18 +116,24 @@ with st.sidebar:
         st.session_state.contador_ronda = 0
         st.session_state.ultimo_ganador = None
         st.session_state.acta_descargada = False
-        st.success("¡Planilla cargada!")
+        st.success("¡Planilla cargada correctamente!")
 
     if st.session_state.df_original is not None:
         st.write("---")
         st.header("🎯 Configurar Ronda")
         
-        # LIMITADO A 20 MÁXIMO AQUÍ
-        st.session_state.cantidad_a_sortear = st.number_input("Premios a sortear (Máx 20):", 1, 20, st.session_state.cantidad_a_sortear)
+        # SELECTOR DE CANTIDAD CON BLOQUEO INTEGRADO
+        st.session_state.cantidad_a_sortear = st.number_input(
+            "Premios a sortear (Máx 20):", 
+            1, 20, 
+            st.session_state.cantidad_a_sortear,
+            disabled=bloqueo_seguridad
+        )
         
         if 'agencia' in st.session_state.df_original.columns:
             opc = ["Todas"] + sorted(st.session_state.df_original['agencia'].dropna().unique().tolist())
-            sel = st.selectbox("Agencia:", opc)
+            # SELECTOR DE AGENCIA CON BLOQUEO INTEGRADO
+            sel = st.selectbox("Agencia:", opc, disabled=bloqueo_seguridad)
             if st.button("Aplicar Filtro", disabled=bloqueo_seguridad):
                 st.session_state.df_participantes = st.session_state.df_original.copy() if sel == "Todas" else st.session_state.df_original[st.session_state.df_original['agencia'] == sel].copy()
                 st.session_state.tanda_actual_lista = []
@@ -136,22 +144,25 @@ with st.sidebar:
     if st.session_state.ganadores_lista:
         st.write("---")
         pdf_file = generar_pdf_profesional(st.session_state.ganadores_lista)
-        if st.download_button("📥 DESCARGAR REPORTE", data=pdf_file, file_name=f"reporte_yoayu_{datetime.now().strftime('%H%M')}.pdf", mime="application/pdf", use_container_width=True):
+        if st.download_button("📥 DESCARGAR REPORTE", 
+                             data=pdf_file, 
+                             file_name=f"reporte_yoayu_{datetime.now().strftime('%H%M')}.pdf", 
+                             mime="application/pdf", 
+                             use_container_width=True):
             st.session_state.acta_descargada = True
             st.rerun()
 
-# ---------------- MAIN ----------------
+# ---------------- CUERPO PRINCIPAL ----------------
 st.markdown(f"<h1 style='text-align: center; color: {COLOR_PRIMARIO};'>💰🤝 Sorteo Mega Bono Coop. Yoayu Ltda. 2026 🤝💰</h1>", unsafe_allow_html=True)
 
 if st.session_state.df_participantes is not None:
-    # SE ASEGURA EL LÍMITE DE 20 EN LA LÓGICA
     limite = min(st.session_state.cantidad_a_sortear, 20)
     actual = st.session_state.contador_ronda
     
     c1, c2, c3 = st.columns(3)
     c1.metric("En Tómbola", len(st.session_state.df_participantes))
     c2.metric("Tanda Actual", f"{actual} de {limite}")
-    c3.metric("Total General", len(st.session_state.ganadores_lista))
+    c3.metric("Total Acumulado Acta", len(st.session_state.ganadores_lista))
 
     if actual < limite:
         if st.button("🔴 ¡REALIZAR SORTEO!", type="primary"):
@@ -174,7 +185,7 @@ if st.session_state.df_participantes is not None:
                 st.session_state.acta_descargada = False
                 st.rerun()
     else:
-        st.error(f"✅ Ronda completada. Descargue el reporte para continuar ⛔.")
+        st.error(f"✅ Ronda completada. Descargue el reporte en el panel izquierdo para habilitar nuevos sorteos.")
 
     if st.session_state.ultimo_ganador:
         g = st.session_state.ultimo_ganador
@@ -193,7 +204,7 @@ if st.session_state.df_participantes is not None:
 
     if st.session_state.tanda_actual_lista:
         st.write("---")
-        st.subheader("📋 RESUMEN DE GANADORES")
+        st.subheader("📋 RESUMEN DE GANADORES DE ESTA RONDA")
         cols = st.columns(4)
         for i, g_hist in enumerate(st.session_state.tanda_actual_lista, 1):
             with cols[(i-1) % 4]:
@@ -206,4 +217,4 @@ if st.session_state.df_participantes is not None:
                     </div>
                 """, unsafe_allow_html=True)
 else:
-    st.info("📊👈 Cargue el Excel para comenzar.")
+    st.info("📊👈 Cargue el Excel desde el panel lateral para comenzar.")
