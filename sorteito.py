@@ -62,7 +62,7 @@ def generar_pdf_profesional(lista_ganadores):
     doc = SimpleDocTemplate(buffer, pagesize=letter)
     styles = getSampleStyleSheet()
     elementos = []
-    elementos.append(Paragraph(f"<b>REPORTE: SORTEO MEGA BONO YOAYU 2026</b>", styles['Title']))
+    elementos.append(Paragraph(f"<b>SORTEO MEGA BONO COOPERATIVA YOAYU 2026</b>", styles['Title']))
     elementos.append(Paragraph(f"Fecha: {datetime.now().strftime('%d/%m/%Y %H:%M:%S')}", styles['Normal']))
     elementos.append(Spacer(1, 25))
     datos = [["Cant.", "Nro Rifa", "Nombre y Apellido", "Socio", "Agencia", "Hora"]]
@@ -97,7 +97,7 @@ with st.sidebar:
     archivo_subido = st.file_uploader("1. Cargar Excel", type=["xlsx", "xls"])
 
     if bloqueo_seguridad:
-        st.warning("⚠️ Debe descargar el acta antes de reiniciar o filtrar.")
+        st.warning("⚠️ Debe descargar el reporte antes de reiniciar o filtrar.")
 
     if archivo_subido and st.button("🚀 Cargar / Reiniciar Base", disabled=bloqueo_seguridad):
         df = pd.read_excel(archivo_subido)
@@ -114,14 +114,14 @@ with st.sidebar:
         st.session_state.contador_ronda = 0
         st.session_state.ultimo_ganador = None
         st.session_state.acta_descargada = False
-        st.success("¡Base cargada!")
+        st.success("¡Planilla cargada!")
 
     if st.session_state.df_original is not None:
         st.write("---")
         st.header("🎯 Configurar Ronda")
         
         # LIMITADO A 20 MÁXIMO AQUÍ
-        st.session_state.cantidad_a_sortear = st.number_input("Premios a sortear (Máx. 20):", 1, 20, st.session_state.cantidad_a_sortear)
+        st.session_state.cantidad_a_sortear = st.number_input("Premios a sortear (Máx 20):", 1, 20, st.session_state.cantidad_a_sortear)
         
         if 'agencia' in st.session_state.df_original.columns:
             opc = ["Todas"] + sorted(st.session_state.df_original['agencia'].dropna().unique().tolist())
@@ -136,12 +136,12 @@ with st.sidebar:
     if st.session_state.ganadores_lista:
         st.write("---")
         pdf_file = generar_pdf_profesional(st.session_state.ganadores_lista)
-        if st.download_button("📥 DESCARGAR ACTA", data=pdf_file, file_name=f"acta_yoayu_{datetime.now().strftime('%H%M')}.pdf", mime="application/pdf", use_container_width=True):
+        if st.download_button("📥 DESCARGAR REPORTE", data=pdf_file, file_name=f"reporte_yoayu_{datetime.now().strftime('%H%M')}.pdf", mime="application/pdf", use_container_width=True):
             st.session_state.acta_descargada = True
             st.rerun()
 
 # ---------------- MAIN ----------------
-st.markdown(f"<h1 style='text-align: center; color: {COLOR_PRIMARIO};'>🏆 Sorteo Mega Bono Yoayu 2026🏆</h1>", unsafe_allow_html=True)
+st.markdown(f"<h1 style='text-align: center; color: {COLOR_PRIMARIO};'>💰🤝 Sorteo Mega Bono Coop. Yoayu Ltda. 2026 🤝💰</h1>", unsafe_allow_html=True)
 
 if st.session_state.df_participantes is not None:
     # SE ASEGURA EL LÍMITE DE 20 EN LA LÓGICA
@@ -174,7 +174,7 @@ if st.session_state.df_participantes is not None:
                 st.session_state.acta_descargada = False
                 st.rerun()
     else:
-        st.error(f"⛔ Ronda completada (Límite 20). Descargue el acta para continuar.")
+        st.error(f"✅ Ronda completada. Descargue el reporte para continuar ⛔.")
 
     if st.session_state.ultimo_ganador:
         g = st.session_state.ultimo_ganador
@@ -193,17 +193,17 @@ if st.session_state.df_participantes is not None:
 
     if st.session_state.tanda_actual_lista:
         st.write("---")
-        st.subheader("📋 RESUMEN DE LA TANDA")
+        st.subheader("📋 RESUMEN DE GANADORES")
         cols = st.columns(4)
         for i, g_hist in enumerate(st.session_state.tanda_actual_lista, 1):
             with cols[(i-1) % 4]:
                 st.markdown(f"""
                     <div class="ganador-card">
-                        <span class="nro-premio">Nº {i}</span>
+                        <span class="nro-premio">Premio Nº {i}</span>
                         <span class="rifa-highlight"><b>Rifa: {g_hist['nro']}</b></span>
                         <span class="nombre-txt">{g_hist['nombre']}</span>
                         <span class="detalle-txt">Socio: {g_hist['socio']} | {g_hist['agencia']}</span>
                     </div>
                 """, unsafe_allow_html=True)
 else:
-    st.info("👈 Cargue el Excel para comenzar.")
+    st.info("📊👈 Cargue el Excel para comenzar.")
