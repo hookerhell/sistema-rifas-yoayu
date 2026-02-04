@@ -3,3 +3,4 @@ pandas
 openpyxl
 streamlit-confetti
 reportlab
+xlrd
